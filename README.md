@@ -1,4 +1,4 @@
-# hexagonal-nodejs
+# node-template
 
 A TypeScript/Node.js boilerplate for building backend services with a **functional core / imperative shell** architecture in an onion style.
 
