@@ -1,4 +1,4 @@
-import { PrismaClient } from "../generated/prisma/client";
+import { PrismaClient } from "../../generated/prisma/client";
 
 export class DatabaseClient {
   private static instance: PrismaClient | null = null;

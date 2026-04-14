@@ -1,7 +1,7 @@
 import express, { type Request, type Response, type NextFunction } from "express";
-import { expressAdapter } from "./http/adapters/express";
-import { getUserController, createUserController } from "./http/controllers/user.controller";
-import { userRepository } from "./infrastructure/user-repository.prisma";
+import { expressAdapter } from "./shared/http/adapters/express";
+import { getUserController, createUserController } from "./users/user.controller";
+import { userRepository } from "./users/user.prisma";
 
 const app = express();
 

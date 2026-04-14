@@ -6,52 +6,53 @@ The core is **framework-agnostic**: it knows nothing about Express, Prisma, or a
 
 ---
 
-## Architecture
+## Structure
+
+The layout is **feature-first**. Everything about a domain concept lives together. Only genuinely cross-cutting concerns live in `shared/`.
 
 ```
 src/
-├── core/                          # Pure, framework-agnostic business logic
-│   ├── result.ts                  # Result<T, E> tuple type
-│   ├── domain/
-│   │   └── user.ts                # User type, domain error types & constructors
-│   ├── ports/
-│   │   └── user-repository.ts     # UserRepository interface (port)
-│   └── features/
-│       └── user/
-│           ├── get-user.ts        # getUser(input, deps) use case
-│           └── create-user.ts     # createUser(input, deps) use case
+├── shared/                            # Cross-cutting, reusable across all features
+│   ├── result.ts                      # Result<T, E> tuple type
+│   ├── http/
+│   │   ├── port.ts                    # Request/Response/Controller/Action types
+│   │   └── adapters/
+│   │       └── express.ts             # expressAdapter() — bridges Express ↔ port
+│   └── infrastructure/
+│       └── db.ts                      # PrismaClient singleton
 │
-├── infrastructure/                # DB adapters (driven/secondary side)
-│   ├── db.ts                      # PrismaClient singleton
-│   └── user-repository.prisma.ts  # Prisma implementation of UserRepository
+├── users/                             # Everything about users, co-located
+│   ├── user.domain.ts                 # User type, domain error types & constructors
+│   ├── user.port.ts                   # UserRepository interface
+│   ├── user.prisma.ts                 # Prisma implementation of UserRepository
+│   ├── user.features.ts               # Use case functions
+│   ├── user.controller.ts             # HTTP controllers (GET /users/:id, POST /users)
+│   └── __tests__/                     # Tests co-located with the feature
+│       ├── in-memory-user-repository.ts  # Fast in-memory UserRepository for unit tests
+│       ├── user.features.test.ts      # Unit tests (no DB)
+│       └── user.prisma.test.ts        # Integration tests (real SQLite)
 │
-├── http/                          # HTTP layer (driving/primary side)
-│   ├── port.ts                    # Framework-agnostic Request/Response/Controller types
-│   ├── adapters/
-│   │   └── express.ts             # expressAdapter() — bridges Express ↔ internal port
-│   └── controllers/
-│       └── user.controller.ts     # getUserController, createUserController
-│
-└── app.ts                         # Composition root — wires everything together
-
-tests/
-├── helpers/
-│   └── in-memory-user-repository.ts  # Fast in-memory UserRepository for unit tests
-├── unit/
-│   └── features/user/
-│       ├── get-user.test.ts
-│       └── create-user.test.ts
-└── integration/
-    └── user-repository.prisma.test.ts
+└── app.ts                             # Composition root — wires everything together
 ```
+
+### How the structure grows
+
+This layout works for small projects as-is. As the codebase grows:
+
+- **New feature** → add a new folder (e.g. `src/posts/`, `src/billing/`) with its own `*.domain.ts`, `*.port.ts`, `*.prisma.ts`, `*.features.ts`, `*.controller.ts`.
+- **Shared infrastructure** → if a DB helper, queue client, or other adapter is used by multiple features, it goes in `shared/infrastructure/`.
+- **Shared domain concepts** → if a type is referenced across multiple features (e.g. a `Money` value object), it goes in `shared/domain/`.
+- **The `users/` folder never grows into other features** — each feature stays self-contained.
 
 ### Layer rules
 
-| Layer | May import from | Must NOT import from |
+| Location | May import from | Must NOT import from |
 |---|---|---|
-| `core/` | nothing outside `core/` | `infrastructure/`, `http/`, Express, Prisma |
-| `infrastructure/` | `core/` | `http/` |
-| `http/` | `core/` | `infrastructure/` (except via deps injection) |
+| `users/user.domain.ts` | nothing | anywhere else |
+| `users/user.port.ts` | `user.domain.ts` | `user.prisma.ts`, `shared/infrastructure/`, Express |
+| `users/user.features.ts` | `user.domain.ts`, `user.port.ts`, `shared/result.ts` | `user.prisma.ts`, `shared/infrastructure/`, Express |
+| `users/user.prisma.ts` | `user.domain.ts`, `user.port.ts`, `shared/infrastructure/` | `user.features.ts`, `shared/http/` |
+| `users/user.controller.ts` | `user.features.ts`, `shared/http/port.ts` | `user.prisma.ts`, `shared/infrastructure/` |
 | `app.ts` | everywhere | — |
 
 ### Result type
@@ -64,7 +65,7 @@ type Result<T, E = Error> = [T, null] | [null, E];
 // Usage
 const [user, err] = await getUser({ id }, deps);
 if (err) { /* handle */ }
-// user is T here
+// user is narrowed to T here
 ```
 
 Helper constructors: `ok(value)` and `err(error)`.
@@ -121,8 +122,8 @@ npm run dev
 | `npm run dev` | Start dev server with hot reload (`tsx watch`) |
 | `npm run build` | Compile TypeScript to `dist/` |
 | `npm start` | Run compiled output from `dist/` |
-| `npm test` | Run unit tests only (no DB needed) |
-| `npm run test:integration` | Run integration tests (requires `DATABASE_URL`) |
+| `npm test` | Run unit tests — `*.features.test.ts` (no DB needed) |
+| `npm run test:integration` | Run integration tests — `*.prisma.test.ts` (requires `DATABASE_URL`) |
 | `npm run test:all` | Run all tests |
 | `npm run test:watch` | Watch unit tests |
 | `npm run db:migrate` | Run Prisma migrations (dev) |
@@ -133,22 +134,30 @@ npm run dev
 
 ## Adding a new feature
 
-1. **Domain** — add types and error constructors to `src/core/domain/`.
-2. **Port** — add methods to the repository interface in `src/core/ports/`.
-3. **Use case** — add a function in `src/core/features/<domain>/`. Accept `(input: unknown, deps)`, validate with Zod, return `Result<T, E>`.
-4. **Infrastructure** — implement the new port methods in `src/infrastructure/`.
-5. **Controller** — add a controller function in `src/http/controllers/`. Map `Result` errors to HTTP status codes.
-6. **Wire** — register the route in `src/app.ts` via `expressAdapter`.
-7. **Test** — unit test the use case with the in-memory repository; integration test the adapter.
+1. Create `src/<feature>/` folder.
+2. `<feature>.domain.ts` — domain type + typed error constructors.
+3. `<feature>.port.ts` — repository interface.
+4. `<feature>.prisma.ts` — Prisma adapter implementing the port.
+5. `<feature>.features.ts` — use case functions: accept `(input: unknown, deps)`, validate with Zod, return `Result<T, E>`.
+6. `<feature>.controller.ts` — HTTP controllers: map `Result` errors to status codes.
+7. Wire routes in `app.ts` via `expressAdapter`.
+8. Create `src/<feature>/__tests__/`:
+   - `in-memory-<feature>-repository.ts` — in-memory port implementation for unit tests.
+   - `<feature>.features.test.ts` — unit tests, no DB.
+   - `<feature>.prisma.test.ts` — integration tests against real DB.
 
 ---
 
 ## Running integration tests
 
-Integration tests hit a real SQLite database. Point `DATABASE_URL` at a test database so your dev data is not touched:
+Integration tests hit a real SQLite database. Point `DATABASE_URL` at a test database so the dev database is never touched:
 
 ```bash
-DATABASE_URL="file:./prisma/test.db" npm test
+# First time only — create and migrate the test DB
+DATABASE_URL="file:./prisma/test.db" npx prisma migrate deploy
+
+# Then run integration tests
+npm run test:integration
 ```
 
-The `beforeEach` hook in the integration suite calls `prisma.user.deleteMany()` to ensure a clean slate between tests.
+The `beforeEach` hook calls `prisma.<model>.deleteMany()` to ensure a clean slate between tests.

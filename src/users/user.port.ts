@@ -1,4 +1,4 @@
-import type { User } from "../domain/user";
+import type { User } from "./user.domain";
 
 export type GetUserById = (id: string) => Promise<User | null>;
 export type GetUserByName = (name: string) => Promise<User | null>;

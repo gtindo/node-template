@@ -1,7 +1,7 @@
 import type { PrismaClient } from "../generated/prisma/client";
-import type { UserRepository, CreateUserInput } from "../core/ports/user-repository";
-import type { User } from "../core/domain/user";
-import { DatabaseClient } from "./db";
+import type { UserRepository, CreateUserInput } from "./user.port";
+import type { User } from "./user.domain";
+import { DatabaseClient } from "../shared/infrastructure/db";
 
 export function createPrismaUserAdapter(db: PrismaClient): UserRepository {
   const getUserById = async (id: string): Promise<User | null> => {

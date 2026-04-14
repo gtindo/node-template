@@ -1,14 +1,12 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
-import { PrismaClient } from "../../src/generated/prisma/client";
-import { createPrismaUserAdapter } from "../../src/infrastructure/user-repository.prisma";
+import { PrismaClient } from "../../generated/prisma/client";
+import { createPrismaUserAdapter } from "../user.prisma";
 
 /**
  * Integration tests for the Prisma UserRepository adapter.
  *
- * Uses a separate SQLite test database (TEST_DATABASE_URL env var or an
- * in-memory path) so the dev database is never touched.
- *
- * Run with: DATABASE_URL="file:./prisma/test.db" npm test
+ * Uses a separate SQLite test database so the dev database is never touched.
+ * Run with: npm run test:integration
  */
 
 let prisma: PrismaClient;
@@ -23,7 +21,6 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  // Clean slate before every test
   await prisma.user.deleteMany();
 });
 
@@ -36,7 +33,6 @@ describe("createPrismaUserAdapter", () => {
     expect(user.email).toBe("alice@example.com");
     expect(user.id).toBeDefined();
 
-    // Confirm it's actually persisted
     const found = await repo.getUserById(user.id);
     expect(found).toEqual(user);
   });

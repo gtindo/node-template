@@ -1,15 +1,5 @@
-import { getUser } from "../../core/features/user/get-user";
-import { createUser } from "../../core/features/user/create-user";
-import type { UserRepository } from "../../core/ports/user-repository";
-import type { Controller, Request, Response } from "../port";
-
-// ---------------------------------------------------------------------------
-// Shared deps type
-// ---------------------------------------------------------------------------
-
-type UserDeps = {
-  userRepo: () => UserRepository;
-};
+import { getUser, createUser, type UserDeps } from "./user.features";
+import type { Controller, Request, Response } from "../shared/http/port";
 
 // ---------------------------------------------------------------------------
 // GET /users/:id

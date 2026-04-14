@@ -1,5 +1,5 @@
-import type { User } from "../../src/core/domain/user";
-import type { UserRepository, CreateUserInput } from "../../src/core/ports/user-repository";
+import type { User } from "../user.domain";
+import type { UserRepository, CreateUserInput } from "../user.port";
 
 /**
  * In-memory UserRepository for use in unit tests.
