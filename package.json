@@ -1,0 +1,36 @@
+{
+  "name": "hexagonal-nodejs",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/app.ts",
+    "start": "node dist/app.js",
+    "build": "tsc",
+    "test": "vitest run tests/unit",
+    "test:integration": "DATABASE_URL=\"file:./prisma/test.db\" vitest run tests/integration",
+    "test:all": "DATABASE_URL=\"file:./prisma/test.db\" vitest run",
+    "test:watch": "vitest tests/unit",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:prod": "prisma migrate deploy"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "Hexagonal architecture boilerplate for Node.js with TypeScript — functional core, imperative shell, onion layers.",
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^24.10.0",
+    "prisma": "^6.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.8"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.0.0",
+    "express": "^5.1.0",
+    "multer": "^2.0.2",
+    "zod": "^3.24.0"
+  }
+}

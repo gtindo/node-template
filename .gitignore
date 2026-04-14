@@ -1,0 +1,12 @@
+node_modules
+dist
+
+# Environment variables
+.env
+
+# Prisma generated client
+/src/generated/prisma
+
+# Databases (never commit data files)
+prisma/*.db
+prisma/*.db-journal
